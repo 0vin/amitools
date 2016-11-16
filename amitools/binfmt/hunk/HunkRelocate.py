@@ -1,13 +1,14 @@
+from __future__ import print_function
 import ctypes
 import struct
-import Hunk
+from . import Hunk
 
 class HunkRelocate:
-  
+
   def __init__(self, hunk_file, verbose=False):
     self.hunk_file = hunk_file
     self.verbose = verbose
-    
+
   def get_sizes(self):
     sizes = []
     for segment in self.hunk_file.segments:
@@ -41,7 +42,7 @@ class HunkRelocate:
       addrs.append(addr)
       addr += s + padding
     return addrs
-  
+
   def relocate(self, addr):
     datas = []
     for segment in self.hunk_file.segments:
@@ -49,15 +50,15 @@ class HunkRelocate:
       hunk_no = main_hunk['hunk_no']
       alloc_size = main_hunk['alloc_size']
       size = main_hunk['size']
-      data = ctypes.create_string_buffer(alloc_size)      
-      
+      data = ctypes.create_string_buffer(alloc_size)
+
       # fill in segment data
-      if main_hunk.has_key('data'):
+      if 'data' in main_hunk:
         data.value = main_hunk['data']
-        
+
       if self.verbose:
-        print "#%02d @ %06x" % (hunk_no, addr[hunk_no])
-      
+        print("#%02d @ %06x" % (hunk_no, addr[hunk_no]))
+
       # find relocation hunks
       for hunk in segment[1:]:
         # abs reloc 32 or
@@ -70,7 +71,7 @@ class HunkRelocate:
             offsets = reloc[hunk_num]
             for offset in offsets:
               self.relocate32(hunk_no,data,offset,hunk_addr)
-        
+
       datas.append(data.raw)
     return datas
 
@@ -79,12 +80,12 @@ class HunkRelocate:
     addr = hunk_addr + delta
     self.write_long(data, offset, addr)
     if self.verbose:
-      print "#%02d + %06x: %06x (delta) + %06x (hunk_addr) -> %06x" % (hunk_no, offset, delta, hunk_addr, addr)
-    
+      print("#%02d + %06x: %06x (delta) + %06x (hunk_addr) -> %06x" % (hunk_no, offset, delta, hunk_addr, addr))
+
   def read_long(self, data, offset):
     bytes = data[offset:offset+4]
     return struct.unpack(">i",bytes)[0]
-  
+
   def write_long(self, data, offset, value):
     bytes = struct.pack(">i",value)
     data[offset:offset+4] = bytes
